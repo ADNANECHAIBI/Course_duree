@@ -278,7 +278,7 @@
 
   /* Étapes / breadcrumb de progression */
   .wizard-progress { margin-bottom: 10px; }
-  .wizard-progress-label { font-size: 12px; color: var(--clr-muted); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-weight: 600; }
+  .wizard-progress-label { font-size: 12px; color: var(--clr-muted); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-weight: 600; flex-wrap: wrap; }
   .wizard-progress-label strong { color: var(--clr-accent); font-weight: 700; }
   .wizard-progress-bar { height: 5px; background: var(--clr-surface2); border-radius: 3px; overflow: hidden; max-width: 480px; }
   .wizard-progress-fill { height: 100%; background: linear-gradient(90deg, var(--clr-accent2), var(--clr-accent)); border-radius: 3px; transition: width .4s cubic-bezier(.16,1,.3,1); }
@@ -288,20 +288,21 @@
   .wizard-edge-btn {
     position: fixed; top: 50%; transform: translateY(-50%); z-index: 800;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-    width: 36px; min-height: 68px; padding: 8px 3px; border: none; cursor: pointer;
+    width: 26px; min-height: 50px; padding: 6px 2px; border: none; cursor: pointer;
     background: var(--clr-accent); color: #0f1117;
     box-shadow: 0 6px 20px rgba(0,0,0,0.35);
     transition: width .22s ease, opacity .22s ease, background .2s;
     font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   }
-  .wizard-edge-btn:hover:not(:disabled) { width: 46px; }
+  .wizard-edge-btn:hover:not(:disabled) { width: 36px; }
   .wizard-edge-btn:disabled { opacity: 0; pointer-events: none; }
-  .wizard-edge-arrow { font-size: 17px; line-height: 1; font-weight: 700; }
-  .wizard-edge-caption { font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; text-align: center; line-height: 1.15; }
-  .wizard-edge-prev { left: 0; border-radius: 0 40px 40px 0; }
-  .wizard-edge-next { right: 0; border-radius: 40px 0 0 40px; }
+  .wizard-edge-arrow { font-size: 14px; line-height: 1; font-weight: 700; }
+  .wizard-edge-caption { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; text-align: center; line-height: 1.15; }
+  .wizard-edge-prev { left: 0; border-radius: 0 28px 28px 0; }
+  .wizard-edge-next { right: 0; border-radius: 28px 0 0 28px; }
   @media (max-width: 640px) {
-    .wizard-edge-btn { width: 26px; min-height: 54px; }
+    .wizard-edge-btn { width: 18px; min-height: 38px; padding: 4px 2px; }
+    .wizard-edge-arrow { font-size: 12px; }
     .wizard-edge-caption { display: none; }
   }
 
@@ -727,10 +728,13 @@
       flex-wrap: wrap !important;
     }
 
-    /* 2) ESPACEMENT — on resserre les marges/paddings des grands conteneurs */
+    /* 2) ESPACEMENT — on resserre les marges/paddings des grands conteneurs.
+       padding gauche/droite porté à 24px (au lieu de 12px) pour laisser
+       respirer le contenu à côté des boutons flottants ←/→ fixés aux
+       bords de l'écran (.wizard-edge-btn, ~18-26px de large). */
     [style*="max-width:1400px"] {
-      padding-left: 12px !important;
-      padding-right: 12px !important;
+      padding-left: 24px !important;
+      padding-right: 24px !important;
     }
     .app-header > div { padding: 24px 20px !important; }
     .panel-header { padding: 12px 14px !important; flex-wrap: wrap; row-gap: 8px; }
@@ -763,15 +767,16 @@
       width: 100% !important;
       justify-content: center !important;
     }
-    /* Onglets principaux : 2 colonnes pleine largeur plutôt qu'une rangée compressée */
+    /* Onglets principaux (3 désormais : Saisie / Résultats / Bilan classe) —
+       restent sur une seule ligne, légèrement plus compacts, avec un padding
+       vertical généreux pour rester faciles à toucher au doigt. */
     .tab-nav {
       max-width: 100% !important;
-      flex-wrap: wrap;
     }
     .tab-btn {
-      flex: 1 1 calc(50% - 4px);
+      flex: 1 1 0;
       font-size: 12px;
-      padding: 9px 6px;
+      padding: 11px 6px;
     }
 
     /* 5) CARTES & BADGES — éviter tout débordement de texte */
@@ -779,6 +784,13 @@
     .stat-label, .stat-sub { overflow-wrap: break-word; }
     .panel { overflow-x: hidden; }
     h1 { word-break: break-word; }
+  }
+
+  /* Très petits écrans (≤ 420px) : les 3 onglets passent en colonne pleine
+     largeur pour rester lisibles plutôt que de se compresser horizontalement. */
+  @media (max-width: 420px) {
+    .tab-nav { flex-direction: column; }
+    .tab-btn { flex: 1 1 100%; font-size: 13px; padding: 12px 10px; }
   }
 
   /* ═══════════════════════════════════════════════════════════════
@@ -4776,24 +4788,26 @@ function printStudentObservationSheets() {
   const tourCellsVides = `<td></td>`.repeat(nTours);
 
   // ── Bloc HTML d'UNE fiche individuelle ───────────────────────────
-  // Structure conforme au croquis : une barre de titre fine en haut,
-  // puis TOUS les champs fixes regroupés sur une seule ligne aérée
-  // (Nom et Prénom, N°, Observateur, Date, Classe, VMA attendue),
-  // et le tableau des tours juste en dessous, sans bloc intermédiaire.
+  // Maquette : badge "Activité" + titre encadré + bloc Date/Classe/VMA
+  // à droite sur la même ligne, puis Nom/N°/Observateur juste en
+  // dessous, puis le tableau des tours (nombre de colonnes 100%
+  // dynamique — cf. nTours calculé plus haut, jamais figé à 5).
   const fiche = `
   <div class="fiche">
-    <div class="fiche-topbar">
-      <span class="fiche-title">FICHE D'OBSERVATION DE L'ÉLÈVE</span>
-      <span class="fiche-activity">Course de Durée</span>
+    <div class="fiche-header">
+      <span class="fiche-badge">Activité : Course de Durée</span>
+      <span class="fiche-title-box">FICHE D'OBSERVATION DE L'ÉLÈVE</span>
+      <div class="fiche-meta">
+        <div>Date : <span class="dots-inline">________________</span></div>
+        <div>Classe : <span class="dots-inline">________________</span></div>
+        <div>VMA attendue : <span class="dots-inline short">________</span> Km/h</div>
+      </div>
     </div>
 
     <div class="fiche-fields">
-      <span>Nom et Prénom : <span class="dots-inline long">..........................................</span></span>
-      <span>N° : <span class="dots-inline short">..........</span></span>
-      <span>Observateur : <span class="dots-inline long">..........................................</span></span>
-      <span>Date : <span class="dots-inline">..................</span></span>
-      <span>Classe : <span class="dots-inline">..............</span></span>
-      <span>VMA attendue : <span class="dots-inline short">..........</span> km/h</span>
+      <span>Nom et Prénom : <span class="dots-inline long">________________________________</span></span>
+      <span>N° : <span class="dots-inline short">__________</span></span>
+      <span>Observateur : <span class="dots-inline long">________________________________</span></span>
     </div>
 
     <table class="fiche-table">
@@ -4832,35 +4846,29 @@ function printStudentObservationSheets() {
   }
 
   /* ── Page : 4 fiches empilées, chacune pleine largeur ──────────────
-     Regroupement STRICT de 4 fiches par page A4 : la pile remplit
-     toute la hauteur utile de la page, et un saut de page propre est
-     forcé après chaque groupe de 4 (break-after / page-break-after),
-     sans qu'une fiche individuelle ne soit jamais coupée entre deux
-     pages (break-inside: avoid). ── */
+     Chaque fiche a désormais une hauteur FIXE et confortable (calculée
+     pour contenir son contenu avec une marge de sécurité), au lieu
+     d'un flex-shrink forcé dans un conteneur de hauteur fixe 285mm —
+     cette dernière technique se révèle peu fiable selon le moteur de
+     rendu/impression (notamment sur certains navigateurs mobiles) et
+     pouvait corrompre l'affichage. Les 4 fiches tiennent ainsi très
+     largement sur une seule page A4, avec marge confortable. ── */
   .page-stack {
     display: flex;
     flex-direction: column;
     gap: 2mm;
     width: 100%;
-    height: 285mm; /* A4 utile portrait ≈ (297 - 2*6mm) */
-    break-after: page;
-    page-break-after: always;
-  }
-  .page-stack:last-of-type {
-    break-after: auto;
-    page-break-after: auto;
   }
 
-  /* Chaque fiche occupe rigoureusement 1/4 de la hauteur utile de la
-     page (flex:1 1 0 sur 4 éléments dans un conteneur de hauteur fixe
-     285mm) : la division est automatique et exacte, sans pourcentage
-     arbitraire ni vide résiduel. */
+  /* Hauteur fixe et généreuse par fiche (≈ 48mm de contenu réel +
+     marge de sécurité) : fiable sur tous les moteurs de rendu, plutôt
+     qu'une division mathématique exacte du conteneur. */
   .fiche {
-    flex: 1 1 0;
-    min-height: 0;
-    border: 1.3px solid #111;
-    border-radius: 3px;
-    padding: 1.2mm 3mm;
+    height: 48mm;
+    flex-shrink: 0;
+    border: 1.6px solid #1b2a52;
+    border-radius: 8px;
+    padding: 1.4mm 3mm;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -4869,19 +4877,27 @@ function printStudentObservationSheets() {
     page-break-inside: avoid;
   }
 
-  /* ── Barre de titre fine (titre + activité, sur une seule ligne) ── */
-  .fiche-topbar {
-    display: flex; align-items: baseline; justify-content: space-between;
-    flex-shrink: 0; gap: 4mm; margin-bottom: 0.8mm;
-    border-bottom: 1.2px solid #111; padding-bottom: 0.6mm;
+  /* ── En-tête : badge "Activité" + titre encadré + bloc Date/Classe/VMA
+     aligné à droite, tous les trois sur une seule ligne (maquette) ── */
+  .fiche-header {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0; gap: 2.5mm; margin-bottom: 1mm;
   }
-  .fiche-title { font-size: 9.5px; font-weight: 700; letter-spacing: 0.02em; white-space: nowrap; }
-  .fiche-activity { font-size: 7.5px; font-weight: 600; color: #444; white-space: nowrap; }
+  .fiche-badge {
+    background: #1b2a52; color: #fff; font-weight: 700; font-size: 7px;
+    padding: 1mm 2.5mm; border-radius: 4px; white-space: nowrap; flex-shrink: 0;
+  }
+  .fiche-title-box {
+    border: 1px solid #1b2a52; border-radius: 4px; padding: 0.9mm 3mm;
+    font-weight: 700; font-size: 8.3px; color: #1b2a52; letter-spacing: 0.01em;
+    white-space: nowrap; text-align: center; flex-shrink: 0;
+  }
+  .fiche-meta {
+    display: flex; flex-direction: column; gap: 0.4mm;
+    font-size: 6.3px; text-align: right; white-space: nowrap; flex-shrink: 0;
+  }
 
-  /* ── Tous les champs fixes regroupés sur une seule ligne aérée ──
-     (Nom et Prénom, N°, Observateur, Date, Classe, VMA attendue) :
-     placés proprement en haut, juste au-dessus du tableau des tours,
-     sans bloc intermédiaire qui creuserait un vide. ── */
+  /* ── Ligne Nom et Prénom / N° / Observateur, juste sous l'en-tête ── */
   .fiche-fields {
     display: flex; flex-wrap: wrap; align-items: baseline; gap: 1mm 5mm;
     font-size: 7.5px; margin-bottom: 1mm; flex-shrink: 0;
@@ -4923,11 +4939,14 @@ function printStudentObservationSheets() {
     white-space: nowrap;
     width: 30mm;
   }
-  /* Ligne "Temps de passage" — généreuse pour écrire un chrono au
-     stylo (ex: 03:34), calibrée pour occuper la quasi-totalité de
-     l'espace vertical restant de la fiche sans jamais en déborder. */
+  /* Ligne "Temps de passage" — confortable pour écrire un chrono au
+     stylo (ex: 03:34), recalibrée pour la nouvelle hauteur FIXE de
+     48mm par fiche (en-tête + champs + en-tête tableau ≈ 18-20mm),
+     avec une marge de sécurité confortable plutôt qu'un calcul au
+     plus juste qui risquait de déborder sur certains moteurs de
+     rendu/impression. */
   .fiche-table tbody td:not(.lib-col) {
-    height: 46mm;
+    height: 26mm;
     background: #fff;
   }
 </style>
