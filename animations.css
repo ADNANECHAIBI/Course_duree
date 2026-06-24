@@ -1,0 +1,264 @@
+/* ════════════════════════════════════════════════════════════════════════
+   APD 2026 — COUCHE DE DESIGN COMPLÉMENTAIRE  (animations.css)
+   ----------------------------------------------------------------------
+   Ce fichier ne redéfinit JAMAIS les règles déjà présentes dans index.html
+   (palette --clr-*, .btn-primary/.btn-secondary/.btn-green/.btn-danger,
+   .stat-card, .tab-content { tabFadeIn }, etc.). Il vient les COMPLÉTER :
+
+     • Toutes les nouvelles classes/keyframes sont préfixées "apd2-"
+       → aucune collision possible avec le code existant.
+     • Toutes les couleurs viennent des variables déjà définies dans
+       index.html (var(--clr-accent), var(--clr-text), ...) → compatible
+       mode sombre/clair sans aucune logique supplémentaire.
+     • Les effets de survol "glow/jitter" sur les boutons passent par un
+       pseudo-élément ::after (halo) plutôt que par leurs propriétés
+       transform/box-shadow déjà fixées en !important dans ton fichier
+       (cf. .btn-primary:hover etc.) — donc rien n'est écrasé, rien ne
+       casse, l'effet existant + le nouveau se cumulent proprement.
+     • prefers-reduced-motion et (hover:hover)/(pointer:fine) sont
+       respectés partout : pas d'animation en boucle infinie (mauvais
+       pour la batterie d'une tablette utilisée au soleil sur un stade),
+       pas de hover "collant" sur écran tactile.
+
+   Chargement : à placer dans <head>, APRÈS les <style> déjà présents,
+   donc juste avant la balise fermante </head>.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Jetons internes (namespacés, ne touchent à aucune variable
+        existante : --clr-*, --bg-*, --text-*, --border-color restent
+        intouchés) ───────────────────────────────────────────────────── */
+:root {
+  --apd2-ease:        cubic-bezier(.16,1,.3,1);
+  --apd2-ease-soft:    cubic-bezier(.25,.8,.25,1);
+  --apd2-dur-fast:     180ms;
+  --apd2-dur:          320ms;
+  --apd2-dur-slow:     520ms;
+  --apd2-radius:       12px;
+  --apd2-stagger-step: 45ms;
+  --apd2-glow-accent:  rgba(232,184,75,.35);
+  --apd2-glow-blue:    rgba(75,143,232,.35);
+  --apd2-glow-green:   rgba(62,207,142,.35);
+  --apd2-glow-red:     rgba(248,81,73,.35);
+}
+html.light-mode {
+  /* Halos plus discrets sur fond clair pour rester "épuré" en plein soleil */
+  --apd2-glow-accent: rgba(184,121,31,.22);
+  --apd2-glow-blue:   rgba(47,111,209,.22);
+  --apd2-glow-green:  rgba(21,128,61,.22);
+  --apd2-glow-red:    rgba(220,38,38,.22);
+}
+
+/* ── 2. Accessibilité — focus clavier visible partout (manquant pour
+        certains éléments interactifs natifs) ─────────────────────────── */
+.tab-btn:focus-visible,
+.btn:focus-visible,
+.wizard-edge-btn:focus-visible,
+.theme-toggle-btn:focus-visible,
+.modal-close:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--clr-accent2);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ── 3. Scrollbars thématisées (tableaux, modales) — détail "pro" qui
+        évite la barre grise par défaut du navigateur ───────────────────── */
+.table-scroll, .modal-box, .data-table {
+  scrollbar-width: thin;
+  scrollbar-color: var(--clr-border) transparent;
+}
+.table-scroll::-webkit-scrollbar, .modal-box::-webkit-scrollbar {
+  height: 8px; width: 8px;
+}
+.table-scroll::-webkit-scrollbar-thumb, .modal-box::-webkit-scrollbar-thumb {
+  background: var(--clr-border);
+  border-radius: 8px;
+}
+.table-scroll::-webkit-scrollbar-thumb:hover, .modal-box::-webkit-scrollbar-thumb:hover {
+  background: var(--clr-accent2);
+}
+
+/* ── 4. Halo de survol sur les boutons (glow) ─────────────────────────
+   Implémenté en ::after pour ne jamais entrer en conflit avec les
+   transform/box-shadow déjà posés en !important sur .btn-primary,
+   .btn-secondary, .btn-green, .btn-danger, .wizard-edge-btn (qui a
+   besoin de son translateY(-50%) pour rester centré verticalement). */
+/* position:relative est nécessaire SUR TOUS LES APPAREILS (pas seulement
+   hover-capable) car le calque de ripple tactile (§6) s'y positionne en
+   absolute. .wizard-edge-btn est volontairement exclu : il a déjà
+   position:fixed dans index.html (essentiel à son ancrage sur les bords
+   de l'écran) — on ne le redéclare jamais pour ne pas l'écraser. Son
+   propre fixed sert tout aussi bien de contexte de positionnement pour
+   son ::after et son futur calque de ripple, sans rien y toucher. */
+.btn, .tab-btn, .theme-toggle-btn {
+  position: relative;
+  isolation: isolate; /* le halo reste derrière le contenu du bouton */
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn::after, .tab-btn::after, .wizard-edge-btn::after, .theme-toggle-btn::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: inherit;
+    background: radial-gradient(circle, var(--apd2-glow-accent) 0%, transparent 72%);
+    opacity: 0;
+    transform: scale(.85) rotate(0deg);
+    transition: opacity var(--apd2-dur) var(--apd2-ease),
+                transform var(--apd2-dur-slow) var(--apd2-ease);
+    pointer-events: none;
+    z-index: -1;
+  }
+  .btn-green::after        { background: radial-gradient(circle, var(--apd2-glow-green) 0%, transparent 72%); }
+  .btn-danger::after       { background: radial-gradient(circle, var(--apd2-glow-red) 0%, transparent 72%); }
+  .btn-secondary::after,
+  .theme-toggle-btn::after { background: radial-gradient(circle, var(--apd2-glow-blue) 0%, transparent 72%); }
+
+  .btn:hover::after, .tab-btn:hover::after,
+  .wizard-edge-btn:hover:not(:disabled)::after, .theme-toggle-btn:hover::after {
+    opacity: 1;
+    transform: scale(1.08) rotate(-1.5deg);
+  }
+  /* Micro-respiration "jitter" du halo au survol (une seule oscillation,
+     pas de boucle infinie — cf. note sur la sobriété/batterie ci-dessus). */
+  .btn:hover::after, .tab-btn:hover::after, .theme-toggle-btn:hover::after {
+    animation: apd2HaloJitter var(--apd2-dur-slow) var(--apd2-ease) 1;
+  }
+}
+@keyframes apd2HaloJitter {
+  0%   { transform: scale(.9)  rotate(0deg); }
+  35%  { transform: scale(1.1) rotate(-2deg); }
+  65%  { transform: scale(1.05) rotate(1.4deg); }
+  100% { transform: scale(1.08) rotate(-1.5deg); }
+}
+
+/* Jitter réel (rotation) sur les onglets inactifs — sans risque ici car
+   .tab-btn:not(.active):hover ne pose pas de transform en !important
+   dans index.html : l'animation peut donc piloter transform sereinement. */
+@media (hover: hover) and (pointer: fine) {
+  .tab-btn:not(.active):hover {
+    animation: apd2TabWiggle var(--apd2-dur) var(--apd2-ease-soft) both;
+  }
+}
+@keyframes apd2TabWiggle {
+  0%   { transform: translateY(0)    rotate(0deg); }
+  40%  { transform: translateY(-2px) rotate(-0.6deg); }
+  70%  { transform: translateY(-1.5px) rotate(0.4deg); }
+  100% { transform: translateY(-1px) rotate(0deg); }
+}
+
+/* ── 5. Onglets — habillage "verre dépoli" sobre + halo doux sur l'onglet
+        actif (purement décoratif, n'altère ni la largeur ni le texte) ──── */
+.tab-nav {
+  backdrop-filter: saturate(1.05);
+  box-shadow: inset 0 0 0 1px rgba(127,127,127,.06);
+}
+.tab-btn.active {
+  box-shadow: 0 0 0 1px var(--clr-border), 0 6px 16px -4px var(--apd2-glow-accent);
+}
+
+/* Barre de progression du wizard : léger reflet animé au changement de
+   largeur uniquement (transition déjà existante sur width, on ajoute un
+   reflet — pas de boucle infinie). */
+.wizard-progress-fill {
+  background-size: 200% 100%;
+  background-image: linear-gradient(90deg, var(--clr-accent2), var(--clr-accent), var(--clr-accent2));
+}
+
+/* ── 6. Système de "ripple" tactile (clic) — injecté en JS par
+        animations.js. Le calque .apd2-ripple-layer est ajouté comme
+        premier enfant du bouton et clippe la propagation circulaire
+        SANS toucher au overflow du bouton lui-même (qui doit rester
+        visible pour laisser sortir le halo défini plus haut). ──────────── */
+.apd2-ripple-layer {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+}
+.apd2-ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: .28;
+  transform: scale(0);
+  animation: apd2RippleAnim 550ms var(--apd2-ease-soft) forwards;
+}
+@keyframes apd2RippleAnim {
+  to { transform: scale(1); opacity: 0; }
+}
+
+/* ── 7. Révélation en cascade au changement d'onglet — classes posées et
+        retirées dynamiquement par animations.js via MutationObserver,
+        totalement indépendantes de switchTab()/WIZARD_TABS. ────────────
+        Les éléments contenant un <canvas> (Chart.js) ne reçoivent qu'une
+        transition d'opacité — jamais de transform — afin d'exclure tout
+        risque d'interférence avec les mesures de dimension de Chart.js. */
+.apd2-stagger-item {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity var(--apd2-dur) var(--apd2-ease),
+              transform var(--apd2-dur) var(--apd2-ease);
+  will-change: opacity, transform;
+}
+.apd2-stagger-item.apd2-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+.apd2-stagger-item.apd2-no-transform {
+  transform: none !important; /* cas des conteneurs de graphiques Chart.js */
+}
+
+/* ── 8. Cartes & encarts secondaires — finition discrète au survol
+        (score-item, diag-box, pilules de barème personnalisé) :
+        un simple éclat de bordure, jamais de transform pour ne pas
+        perturber la mise en page des grilles de score. ─────────────────── */
+@media (hover: hover) and (pointer: fine) {
+  .score-item, .diag-box, .custom-bareme-pill {
+    transition: border-color var(--apd2-dur-fast) ease, background-color var(--apd2-dur-fast) ease;
+  }
+  .score-item:hover, .diag-box:hover {
+    border-color: var(--clr-accent2);
+  }
+}
+
+/* ── 9. Mode clair "plein soleil" — contraste et cibles tactiles
+        renforcés pour une lecture en extérieur (tablette sur un stade). ── */
+html.light-mode .tab-btn.active { box-shadow: 0 0 0 1.5px var(--clr-accent2); }
+html.light-mode .stat-value      { -webkit-font-smoothing: antialiased; }
+@media (max-width: 768px) {
+  html.light-mode body { font-weight: 500; } /* meilleure lisibilité au soleil */
+}
+
+/* ── 10. Confort tactile — cibles minimales 44px sur mobile (norme
+         d'accessibilité), sans changer la mise en page existante. ────────── */
+@media (max-width: 768px) {
+  .tab-btn, .btn { min-height: 44px; }
+  .wizard-edge-btn { min-height: 56px; }
+}
+
+/* ── 11. Petits écrans additionnels (≤360px) — non couverts par les
+         breakpoints existants (768px / 420px). ──────────────────────────── */
+@media (max-width: 360px) {
+  .stat-value { font-size: 19px !important; }
+  .tab-btn { font-size: 11.5px; padding: 10px 4px; }
+}
+
+/* ── 12. Confort visuel tablette en paysage (très large mais bas) ────────── */
+@media (max-height: 480px) and (orientation: landscape) {
+  .wizard-progress { margin-bottom: 6px; }
+  .app-header > div { padding: 10px 16px !important; }
+}
+
+/* ── 13. Garde-fou final — respect strict de prefers-reduced-motion pour
+         TOUT ce qui est ajouté par cette feuille (le reste de l'app gère
+         déjà son propre kill-switch ailleurs dans index.html). ──────────── */
+@media (prefers-reduced-motion: reduce) {
+  .btn::after, .tab-btn::after, .wizard-edge-btn::after, .theme-toggle-btn::after,
+  .apd2-ripple, .apd2-stagger-item {
+    animation: none !important;
+    transition: none !important;
+  }
+  .apd2-stagger-item { opacity: 1 !important; transform: none !important; }
+}
